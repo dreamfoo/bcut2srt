@@ -184,7 +184,7 @@
 				reader.onload = function() {
 					if (reader.readyState == 2) {
 						result = reader.result
-						console.log(result)
+						//console.log(result)
 						var x2js = new X2JS();
 						var jsonObj = x2js.xml_str2json(result);
 						console.log(jsonObj)

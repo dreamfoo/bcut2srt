@@ -4,10 +4,10 @@
 		<meta charset="UTF-8">
 		<title>必剪字幕导出</title>
 		<!-- Bulma Version 0.9.0-->
-		<link rel='stylesheet prefetch' href='https://unpkg.com/bulma@0.9.0/css/bulma.min.css'>
+		<link rel='stylesheet prefetch' href='./css/bluma.css'>
 		<link rel="stylesheet" href="./css/bcut.css">
 
-		<script src="http://cdn.staticfile.org/x2js/1.0.11/xml2json.min.js" crossorigin="anonymous"></script>
+
 
 	</head>
 	<body>
@@ -25,7 +25,7 @@
 				<input class="file-input " id='myfile' type="file" name="resume"
 					onchange="processFiles(this.files)"></input>
 
-				<span class="title">点击上传或拖拽到此处</span>
+				<span class="title">点击上传XML文件</span>
 
 			</div>
 			<div class="tabs is-boxed has-text-info-dark is-toggle is-centered main-menu" id="nav">
@@ -43,6 +43,13 @@
 		<script type="text/javascript">
 		
 			var curr_tab = 1;
+			var _hmt = _hmt || [];
+			(function() {
+			  var hm = document.createElement("script");
+			  hm.src = "https://hm.baidu.com/hm.js?711a43ba318b8c79e440f2145a702d9e";
+			  var s = document.getElementsByTagName("script")[0]; 
+			  s.parentNode.insertBefore(hm, s);
+			})();
 			/* drop */
 
 			let dropzone = document.getElementById("myfile");
@@ -159,6 +166,11 @@
 
 				reader = new FileReader(),
 					result = '';
+				
+				if(!file || !checkFileExt(file.name)){
+					window.alert("当前不支持此类文件,稍后会支持文件夹等拖拽。。。");
+					return;
+				}
 				if (file) {
 					//reader.readAsDataURL(file)
 					reader.readAsText(file, "UTF-8")
@@ -452,7 +464,7 @@
 				var textara = document.getElementById('textarea'+curr_tab)
 				textara.select();
 				document.execCommand("copy")
-				console.log(textara.value)
+				//console.log(textara.value)
 			}
 			
 			function downText(){
@@ -476,9 +488,7 @@
 			};
 		</script>
 
-
-
-		<!-- <script src="../js/tabs.js"></script> -->
+		<script src="./js/xml2json.js"></script>
 
 
 

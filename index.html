@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>必剪字幕导出</title>
+		<!-- Bulma Version 0.9.0-->
+		<link rel='stylesheet prefetch' href='https://unpkg.com/bulma@0.9.0/css/bulma.min.css'>
+		<link rel="stylesheet" href="./css/bcut.css">
+
+		<script src="http://cdn.staticfile.org/x2js/1.0.11/xml2json.min.js" crossorigin="anonymous"></script>
+
+	</head>
+	<body>
+
+		<section class="hero is-info">
+
+			<h2 class="subtitle">
+				必剪字幕导出工具
+			</h2>
+
+
+
+			<div class="file hero-body">
+
+				<input class="file-input " id='myfile' type="file" name="resume"
+					onchange="processFiles(this.files)"></input>
+
+				<span class="title">点击上传或拖拽到此处</span>
+
+			</div>
+			<div class="tabs is-boxed has-text-info-dark is-toggle is-centered main-menu" id="nav">
+				<ul id="nav-ul">
+
+				</ul>
+			</div>
+
+			<div class="tab-content" id="tab-content">
+
+			</div>
+			</div>
+		</section>
+
+		<script type="text/javascript">
+		
+			var curr_tab = 1;
+			/* drop */
+
+			let dropzone = document.getElementById("myfile");
+			//var files = new Array();
+			dropzone.addEventListener("dragover", function(event) {
+				event.preventDefault();
+			}, false);
+
+			/**
+			 * 读取文件
+			 * @param  item         FileSystemDirectoryEntry 对象实例（目录实体）
+			 * @param  container     显示容器
+			 * @return void
+			 */
+			function scanFiles(item,files) {
+
+				//console.log(item)
+				if(!files){
+					//files = [];
+				}
+
+				if (item.isFile) {
+					if (checkFileExt(item.name))
+						files.push(item)
+				}
+
+				// 如果是目录，则递归读取
+				if (item.isDirectory) {
+					// 使用目录实体来创建 FileSystemDirectoryReader 实例
+					let directoryReader = item.createReader();
+				
+					// 上面只是创建了 reader 实例，现在使用 reader 实例来读取 目录实体（读取目录内容）
+					directoryReader.readEntries(function(entries) {
+						// 循环目录内容
+						entries.forEach(function(entry) {
+							// 处理内容（递归）
+							scanFiles(entry,files);
+						});
+					});
+				}
+				
+				
+			}
+
+
+
+			// 拖拽结束时触发
+			dropzone.addEventListener("drop", function(event) {
+				event.stopPropagation();
+				//event.dataTransfer = event.originalEvent.dataTransfer;
+				
+				// 拖拽（转移）的对象列表
+				let items = event.dataTransfer.items;
+				event.preventDefault();
+				listFile(items) 
+				
+				//
+				//let fs = JSON.parse(JSON.stringify(files) );
+				
+
+			}, false);
+			
+			
+			function listFile(items) {
+				
+				var files = new Array();
+				
+				for (let i = 0; i < items.length; i++) {
+					// file 对象（按实例拖拽的内容）转换成 FileSystemFileEntry 对象 或 FileSystemDirectoryEntry 对象
+					let item = items[i].webkitGetAsEntry();
+					if (item) {
+						// 读取文件
+						scanFiles(item,files);
+					}
+				
+				
+				}
+				
+				console.log(files)
+				
+				console.log('拖拽结束')
+				Object.keys(files).forEach(function(key){
+				
+				     console.log(key,files[key]);
+				
+				});
+				
+				
+				console.log(JSON.stringify(files))
+				console.log(typeof files)
+				processFilesSync(files)
+				
+			}
+
+
+			function checkFileExt(filename) {
+				var flag = false; //状态
+				var arr = ["xml", "XML"];
+				//取出上传文件的扩展名
+				var index = filename.lastIndexOf(".");
+				var ext = filename.substr(index + 1);
+				//循环比较
+				for (var i = 0; i < arr.length; i++) {
+					if (ext == arr[i]) {
+						flag = true; //一旦找到合适的，立即退出循环
+						break;
+					}
+				}
+				return flag;
+			}
+
+			function processFiles(files) {
+				var file = files[0];
+
+				reader = new FileReader(),
+					result = '';
+				if (file) {
+					//reader.readAsDataURL(file)
+					reader.readAsText(file, "UTF-8")
+				}
+				reader.onabort = function() {
+					//读取中断
+				};
+				reader.onerror = function() {
+					//读取发生错误
+				};
+				reader.onload = function() {
+					if (reader.readyState == 2) {
+						result = reader.result
+						console.log(result)
+						var x2js = new X2JS();
+						var jsonObj = x2js.xml_str2json(result);
+						console.log(jsonObj)
+
+						//document.getElementById('textarea1').value= 
+						var objs = new Array()
+						objs.push(jsonObj)
+						json2Srt(objs)
+						
+
+					}
+				}
+
+
+			}
+
+			function processFilesSync(files) {
+				console.log('processFilesSync')
+				files.forEach(function(item){
+				    console.log(item)
+				})
+
+				console.log('processFilesSync')
+				var objs = new Array();
+				var i = 0,
+					len = files.length;
+				for (; i < len; ++i) {
+					var file = files[i];
+					console.log(file)
+					var reader = new FileReaderSync()
+					result = reader.readAsText(file, "UTF-8")
+					
+					console.log(result)
+					var x2js = new X2JS();
+					var jsonObj = x2js.xml_str2json(result);
+					objs.push(jsonObj)
+
+
+				}
+
+				json2Srt(objs)
+				return objs;
+
+
+			}
+
+
+			function json2Srt(objs) {
+				console.log(objs)
+				
+				
+				var result = '';
+				var p = -1;
+				var count = 0;
+				while (++p < objs.length) {
+					//find srt node
+					var videoTrack = objs[p].MYProject.timeline.videoTracks.videoTrack
+
+					var i = 0,
+						len = videoTrack.length;
+					var texts = [];
+					
+					for (; i < len; ++i) {
+						var temp = videoTrack[i];
+						console.log(temp)
+						if (!temp.trackCaptions)
+							continue;
+
+
+						//a caption found
+						count;
+
+
+						var caption_text = '';
+						var caption = temp.trackCaptions.caption;
+						var j = 0,
+							len2 = caption.length;
+						for (; j < len2;) {
+							//begin end text
+							let begin = caption[j]._inPoint;
+							let end = parseInt(caption[j]._duration) + parseInt(begin);
+							let text = caption[j]._text;
+
+							caption_text += (++j) + "\n" + formatSeconds(begin + "") + " --> " + formatSeconds(end + "") + "\n" +
+								text + "\n\n"
+
+							//console.log(formatSeconds(begin))
+
+
+						}
+						texts[count++] = caption_text;
+
+					}
+
+				}
+
+
+
+
+
+				gennarateNode(count);
+				var i = 0;
+				for (; i < count; ++i) {
+					document.getElementById('textarea' + (i + 1)).value = texts[i]
+				}
+
+
+
+				return result;
+
+
+			}
+
+			function gennarateNode(count) {
+				var tab_content = document.getElementById('tab-content');
+				var nav_ul = document.getElementById('nav-ul');
+				var str =
+					"<div class='tab-pane ' id='pane-dreamfolflag'> <div class='buttons'> <button class='button is-info'>Info</button> <button class='button is-success'>Success</button> <button class='button is-warning'>Warning</button> <button class='button is-danger'>Danger</button> </div> <textarea  class='textarea is-primary' id='textareadreamfolflag'  rows='20'></textarea> </div> ";
+				var str2 =
+					"<li data-target='pane-dreamfolflag' id='dreamfolflag' class=''> <a> <span>字幕dreamfolflag</span></a></li>"
+				var str3 =
+					"<div class='tab-pane '  id='pane-dreamfolflag'> <div class='buttons'> <button class='button is-info' id='bt_copy'  onclick='copyALLText()'>复制全部</button> <button class='button is-success' id='bt_copy' onclick='downText()'>下载</button> </div> <textarea  class='textarea is-primary' id='textareadreamfolflag'  rows='20'></textarea> </div> ";
+				
+
+				var _str =
+					"<div class='tab-pane ' style='display: block;' id='pane-1'> <div class='buttons'> <button class='button is-info'>Info</button> <button class='button is-success'>Success</button> <button class='button is-warning'>Warning</button> <button class='button is-danger'>Danger</button> </div> <textarea  class='textarea is-primary' id='textarea1'  rows='20'></textarea> </div> ";
+				var _str2 = "<li data-target='pane-1' id='1' class='is-active'> <a> <span>字幕1</span></a></li>"
+				var _str3 =
+					"<div class='tab-pane ' style='display: block;' id='pane-1'> <div class='buttons'> <button class='button is-info' id='bt_copy'  onclick='copyALLText()'>复制全部</button> <button class='button is-success' id='bt_copy' onclick='downText()'>下载</button> </div> <textarea  class='textarea is-primary' id='textarea1'  rows='20'></textarea> </div> ";
+				
+
+				var temp1 = '';
+				var temp2 = '';
+				var i = 0;
+				for (; i < count; ++i) {
+					if (i == 0) {
+						temp1 += _str3;
+						temp2 += _str2;
+						continue;
+					}
+					temp1 += new String(str3).replace(/dreamfolflag/g, (i + 1) + "");
+					temp2 += new String(str2).replace(/dreamfolflag/g, (i + 1) + "");
+
+				}
+
+
+				tab_content.innerHTML = temp1;
+				nav_ul.innerHTML = temp2;
+
+				document.querySelectorAll("#nav li").forEach(function(navEl) {
+					navEl.onclick = function() {
+						toggleTab(this.id, this.dataset.target);
+					}
+				});
+				
+				document.querySelectorAll("#buttons button").forEach(function(navEl) {
+					navEl.onclick = function() {
+						toggleTab(this.id, this.dataset.target);
+					}
+				});
+				
+				
+
+			}
+
+			/**
+			 * 格式化秒
+			 * @param int  value 总秒数
+			 * @return string result 格式化后的字符串
+			 */
+			function formatSeconds(value) {
+				var vlen = value.length;
+				var mm = "" + value.substring(vlen - 6, vlen - 3)
+				//console.log((value))
+				var theTime = parseInt(value / 1000000); // 需要转换的时间秒 
+				var theTime1 = 0; // 分 
+				var theTime2 = 0; // 小时 
+				if (theTime > 60) {
+					theTime1 = parseInt(theTime / 60);
+					theTime = parseInt(theTime % 60);
+					if (theTime1 > 60) {
+						theTime2 = parseInt(theTime1 / 60);
+						theTime1 = parseInt(theTime1 % 60);
+
+					}
+				}
+				var result = '';
+
+
+				result += theTime2 >= 10 ? theTime2 : "0" + theTime2
+				result += ":"
+				result += theTime1 >= 10 ? theTime1 : "0" + theTime1
+				result += ":"
+				result += theTime >= 10 ? theTime : "0" + theTime
+				result += ","
+				result += mm
+
+				return result;
+			}
+
+
+			function xmlToJson(xml) {
+				// 新建返回的对象
+				var obj = {};
+				if (xml.nodeType == 1) {
+
+					// 处理属性
+					if (xml.attributes.length > 0) {
+						obj["@attributes"] = {};
+						for (var j = 0; j < xml.attributes.length; j++) {
+							var attribute = xml.attributes.item(j);
+							obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
+						}
+					}
+				} else if (xml.nodeType == 3) {
+					// 文本
+					obj = xml.nodeValue;
+				}
+				// 处理子节点
+				// 如果所有子节点都是文本，则把它们拼接起来
+				var textNodes = [].slice.call(xml.childNodes).filter(function(node) {
+					return node.nodeType === 3;
+				});
+				if (xml.hasChildNodes() && xml.childNodes.length === textNodes.length) {
+					obj = [].slice.call(xml.childNodes).reduce(function(text, node) {
+						return text + node.nodeValue;
+					}, "");
+				} else if (xml.hasChildNodes()) {
+					for (var i = 0; i < xml.childNodes.length; i++) {
+						var item = xml.childNodes.item(i);
+						var nodeName = item.nodeName;
+						if (typeof obj[nodeName] == "undefined") {
+							obj[nodeName] = xmlToJson(item);
+						} else {
+							if (typeof obj[nodeName].push == "undefined") {
+								var old = obj[nodeName];
+								obj[nodeName] = [];
+								obj[nodeName].push(old);
+							}
+							obj[nodeName].push(xmlToJson(item));
+						}
+					}
+				}
+				return obj;
+			}
+
+
+
+			function toggleTab(selectedNav, targetId) {
+				console.log('tab')
+				console.log(selectedNav+'tab'+targetId)
+				curr_tab = selectedNav
+				var navEls = document.querySelectorAll("#nav li");
+
+				navEls.forEach(function(navEl) {
+					if (navEl.id == selectedNav) {
+						navEl.classList.add("is-active");
+					} else {
+						if (navEl.classList.contains("is-active")) {
+							navEl.classList.remove("is-active");
+						}
+					}
+				});
+
+				var tabs = document.querySelectorAll(".tab-pane");
+
+				tabs.forEach(function(tab) {
+					if (tab.id == targetId) {
+						tab.style.display = "block";
+					} else {
+						tab.style.display = "none";
+					}
+				});
+			}
+			
+			function copyALLText(){
+				var textara = document.getElementById('textarea'+curr_tab)
+				textara.select();
+				document.execCommand("copy")
+				console.log(textara.value)
+			}
+			
+			function downText(){
+				var textara = document.getElementById('textarea'+curr_tab)
+				funDownload(textara.value,new Date().getTime()+curr_tab+'.srt')
+			}
+			
+			var funDownload = function (content, filename) {
+			    // 建立隐藏的可下载连接
+			    var eleLink = document.createElement('a');
+			    eleLink.download = filename;
+			    eleLink.style.display = 'none';
+			    // 字符内容转变成blob地址
+			    var blob = new Blob([content]);
+			    eleLink.href = URL.createObjectURL(blob);
+			    // 触发点击
+			    document.body.appendChild(eleLink);
+			    eleLink.click();
+			    // 而后移除
+			    document.body.removeChild(eleLink);
+			};
+		</script>
+
+
+
+		<!-- <script src="../js/tabs.js"></script> -->
+
+
+
+	</body>
+</html>
